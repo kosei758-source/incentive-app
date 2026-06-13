@@ -2566,12 +2566,23 @@
             if (!tb) return
             tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">読み込み中...</td></tr>'
             const res = await gasPost({ action: 'getAuditLogs' })
-            if (res.ok && res.logs) {
-                AUDIT_LOGS = res.logs
+            if (res.ok) {
+                AUDIT_LOGS = res.logs || []
                 renderAudit()
             } else {
-                tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">データを取得できませんでした</td></tr>'
+                tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">データを取得できませんでした（' + (res.error||'不明') + '）</td></tr>'
             }
+        }
+
+        function fmtTs(ts) {
+            if (!ts) return '—'
+            // Date objectや文字列どちらでも対応
+            try {
+                const d = new Date(ts)
+                if (isNaN(d)) return String(ts)
+                const pad = n => String(n).padStart(2,'0')
+                return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+            } catch(e) { return String(ts) }
         }
 
         function renderAudit() {
@@ -2590,7 +2601,7 @@
             tb.innerHTML = logs.map(l => {
                 const col = ACTION_COLOR[l.action] || 'var(--text2)'
                 return `<tr>
-                    <td style="font-size:12px;color:var(--text3);white-space:nowrap">${l.timestamp}</td>
+                    <td style="font-size:12px;color:var(--text3);white-space:nowrap">${fmtTs(l.timestamp)}</td>
                     <td style="font-size:12px;font-weight:500">${l.operator}</td>
                     <td><span class="badge" style="background:rgba(0,0,0,.05);color:${col};border:1px solid ${col}">${l.action}</span></td>
                     <td style="font-size:12px">${l.target}</td>
