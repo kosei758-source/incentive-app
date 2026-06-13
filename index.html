@@ -1942,7 +1942,7 @@
                     HIST.length = 0;
                     aRes.actions.forEach(r => {
                         HIST.push({
-                            date: r.timestamp ? r.timestamp.substring(5, 10).replace('-', '/') : '--/--',
+                            date: r.timestamp ? (()=>{ const t=String(r.timestamp); const m=t.match(/(\d{4})[/\-](\d{2})[/\-](\d{2})/); return m ? m[2]+'/'+m[3] : '--/--'; })() : '--/--',
                             month: r.month,
                             key: r.staff_key,
                             action: r.action,
@@ -2184,7 +2184,7 @@
                         HIST.length = 0
                         aRes.actions.forEach(r => {
                             HIST.push({
-                                date: r.timestamp ? r.timestamp.substring(5,10).replace('-','/') : '--/--',
+                                date: r.timestamp ? (()=>{ const t=String(r.timestamp); const m=t.match(/(\d{4})[/\-](\d{2})[/\-](\d{2})/); return m ? m[2]+'/'+m[3] : '--/--'; })() : '--/--',
                                 month: r.month, key: r.staff_key, action: r.action,
                                 yen: Number(r.yen) || 0, status: r.status,
                                 reason: r.reason || '', _id: r.id
