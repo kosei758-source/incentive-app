@@ -1674,7 +1674,10 @@
                         </thead>
                         <tbody id="pin-list"></tbody>
                     </table>
-            
+                </div>
+            </div>
+        </div>
+
         <!-- 変更履歴（管理者） -->
         <div id="screen-audit" class="screen">
             <div class="card">
@@ -1935,11 +1938,14 @@
                         });
                     });
                 }
-                // スタッフのスタンプ数を取得
+                // スタッフのスタンプ数・PINを取得
                 const sRes = await gasPost({ action: 'getStaff' });
                 if (sRes.ok && sRes.staff) {
                     sRes.staff.forEach(s => {
-                        if (SM[s.key]) SM[s.key].stamps = Number(s.stamps) || 0;
+                        if (SM[s.key]) {
+                            SM[s.key].stamps = Number(s.stamps) || 0;
+                            if (s.pin) SM[s.key].pin = String(s.pin);
+                        }
                     });
                 }
             } catch (e) {
