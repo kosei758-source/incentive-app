@@ -1905,7 +1905,8 @@
                 const b = document.getElementById('bonus-sub-text');
                 if (b) b.innerHTML = `全KPI達成で <strong>全員に${REWARDS.team_bonus_min.toLocaleString()}〜${REWARDS.team_bonus_max.toLocaleString()}円</strong> 均等支給`;
             }
-            auditLog('報酬変更', '報酬設定', '', JSON.stringify(REWARDS));
+            const rewardDesc = Object.entries(REWARDS).map(([k,v])=>k+':'+v).join(' / ');
+            auditLog('報酬変更', '報酬設定', '', rewardDesc);
     toast('報酬金額を保存しました', 'var(--green)');
         }
 
