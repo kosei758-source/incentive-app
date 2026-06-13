@@ -1714,6 +1714,76 @@
                 </div>
             </div>
         </div>
+
+        <!-- 引継ぎ管理 -->
+        <div id="screen-handover" class="screen">
+            <div id="handover-nurse-form" style="display:none">
+                <div class="card">
+                    <div class="card-title">引継ぎ情報を提出</div>
+                    <p style="font-size:12px;color:var(--text3);margin-bottom:14px">担当カウンセラーへ患者情報を引き継ぎます。</p>
+                    <div class="form-group">
+                        <label class="form-label">患者名・ID <span style="color:var(--red)">*</span></label>
+                        <input class="form-input" id="hw-patient" placeholder="例：山田 太郎 / 患者ID:1234" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">担当カウンセラー <span style="color:var(--red)">*</span></label>
+                        <select class="form-input" id="hw-cs"></select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">引継ぎ内容・メモ <span style="color:var(--red)">*</span></label>
+                        <textarea class="form-input" id="hw-memo" rows="4" placeholder="施術内容、患者の希望、注意点など"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">次回予約候補日</label>
+                        <input class="form-input" id="hw-date" type="date" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">優先度</label>
+                        <select class="form-input" id="hw-priority">
+                            <option value="mid">中（通常）</option>
+                            <option value="high">高（急ぎ）</option>
+                            <option value="low">低</option>
+                        </select>
+                    </div>
+                    <button class="btn-primary" style="width:100%;margin-top:8px" onclick="submitHandover()">引継ぎを提出する</button>
+                </div>
+            </div>
+
+            <div id="handover-cs-view" style="display:none">
+                <div class="card">
+                    <div class="card-title">引継ぎ待ちリスト</div>
+                    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+                        <button class="badge" id="hw-tab-pending" onclick="switchHwTab('pending')" style="cursor:pointer;padding:6px 14px">未対応</button>
+                        <button class="badge" id="hw-tab-in_progress" onclick="switchHwTab('in_progress')" style="cursor:pointer;padding:6px 14px">対応中</button>
+                        <button class="badge" id="hw-tab-done" onclick="switchHwTab('done')" style="cursor:pointer;padding:6px 14px">完了</button>
+                        <button class="btn-outline" style="margin-left:auto;font-size:12px;padding:6px 14px" onclick="loadHandovers()">🔄 更新</button>
+                    </div>
+                    <div id="hw-list"></div>
+                </div>
+            </div>
+
+            <div id="handover-admin-view" style="display:none">
+                <div class="card">
+                    <div class="card-title">引継ぎ管理（全体）</div>
+                    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+                        <select class="form-input" id="hw-admin-filter-status" style="width:auto;font-size:12px;padding:6px 10px" onchange="renderHandoverAdmin()">
+                            <option value="">すべて</option>
+                            <option value="pending">未対応</option>
+                            <option value="in_progress">対応中</option>
+                            <option value="booked">予約成立</option>
+                            <option value="contracted">契約成立</option>
+                            <option value="failed">不成立</option>
+                            <option value="hold">保留</option>
+                        </select>
+                        <select class="form-input" id="hw-admin-filter-cs" style="width:auto;font-size:12px;padding:6px 10px" onchange="renderHandoverAdmin()">
+                            <option value="">全CS</option>
+                        </select>
+                        <button class="btn-outline" style="font-size:12px;padding:6px 14px" onclick="loadHandovers()">🔄 更新</button>
+                    </div>
+                    <div id="hw-admin-list"></div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -2051,13 +2121,13 @@
         // 全員に表示するタブ
         const SCR_ALL = ['dash', 'input', 'kpi', 'compare']
         const SCR_ADMIN = ['approve', 'targets', 'pin', 'audit']
-        const SL = { dash: 'ダッシュボード', input: '行動入力', kpi: 'KPI', compare: '比較', approve: '承認・集計', targets: '目標設定', pin: 'PIN管理', audit: '変更履歴' }
+        const SL = { dash: 'ダッシュボード', input: '行動入力', kpi: 'KPI', compare: '比較', approve: '承認・集計', targets: '目標設定', pin: 'PIN管理', audit: '変更履歴', handover: '引継ぎ' }
         // 医師はdashとkpiとcompare
         const SCREENS_BY_ROLE = {
-            c: ['dash', 'input', 'kpi'],
-            n: ['dash', 'input', 'kpi'],
+            c: ['dash', 'input', 'handover', 'kpi'],
+            n: ['dash', 'input', 'handover', 'kpi'],
             d: ['dash', 'input', 'kpi'],
-            a: ['approve', 'kpi', 'compare', 'targets', 'pin', 'audit'],
+            a: ['approve', 'handover', 'kpi', 'compare', 'targets', 'pin', 'audit'],
         }
 
         // 履歴（前月・前年分もサンプルで含む）
@@ -2259,6 +2329,7 @@
             if (id === 'targets') renderTargets()
             if (id === 'pin') renderPinMgr()
             if (id === 'audit') loadAudit()
+            if (id === 'handover') initHandoverScreen()
         }
 
         // ─────────── ダッシュボード ───────────
@@ -2654,6 +2725,213 @@
             document.getElementById(`nb-${k}`).textContent = v
             document.getElementById(`nb-${k}`).style.display = 'inline-block'
             toast(`${dn(k)} のPINを設定しました`, 'var(--green)')
+        }
+
+
+        // ─────────── 引継ぎ機能 ───────────
+        let HANDOVERS = []
+        let hwCurTab = 'pending'
+
+        const HW_STATUS_LABEL = {
+            pending: '未対応', in_progress: '対応中', booked: '予約成立',
+            contracted: '契約成立', failed: '不成立', hold: '保留'
+        }
+        const HW_STATUS_COLOR = {
+            pending: 'var(--red)', in_progress: '#1A5FAD', booked: 'var(--green)',
+            contracted: '#886334', failed: 'var(--text3)', hold: '#bcb6b7'
+        }
+        const HW_PRIORITY_LABEL = { high: '高', mid: '中', low: '低' }
+        const HW_PRIORITY_COLOR = { high: 'var(--red)', mid: 'var(--p1)', low: 'var(--text3)' }
+
+        function initHandoverScreen() {
+            const role = SM[curKey]?.role
+            document.getElementById('handover-nurse-form').style.display = role === 'n' ? 'block' : 'none'
+            document.getElementById('handover-cs-view').style.display = (role === 'c') ? 'block' : 'none'
+            document.getElementById('handover-admin-view').style.display = role === 'a' ? 'block' : 'none'
+
+            // CS選択プルダウンを構築
+            const sel = document.getElementById('hw-cs')
+            if (sel) {
+                sel.innerHTML = '<option value="">-- 選択してください --</option>'
+                Object.entries(SM).filter(([k, v]) => v.role === 'c' && v.active !== false).forEach(([k, v]) => {
+                    sel.innerHTML += `<option value="${k}">${v.name}</option>`
+                })
+            }
+
+            // 管理者CSフィルタ
+            const asel = document.getElementById('hw-admin-filter-cs')
+            if (asel) {
+                asel.innerHTML = '<option value="">全CS</option>'
+                Object.entries(SM).filter(([k, v]) => v.role === 'c' && v.active !== false).forEach(([k, v]) => {
+                    asel.innerHTML += `<option value="${k}">${v.name}</option>`
+                })
+            }
+
+            loadHandovers()
+        }
+
+        async function loadHandovers() {
+            const res = await gasPost({ action: 'getHandovers' })
+            if (res.ok && res.handovers) {
+                HANDOVERS = res.handovers
+            } else {
+                HANDOVERS = []
+            }
+            const role = SM[curKey]?.role
+            if (role === 'c') renderHandoverCS()
+            if (role === 'a') renderHandoverAdmin()
+        }
+
+        function switchHwTab(tab) {
+            hwCurTab = tab
+            ;['pending','in_progress','done'].forEach(t => {
+                const btn = document.getElementById('hw-tab-' + t)
+                if (btn) {
+                    btn.style.background = t === tab ? 'var(--p1)' : 'rgba(0,0,0,.06)'
+                    btn.style.color = t === tab ? '#fff' : 'var(--text2)'
+                }
+            })
+            renderHandoverCS()
+        }
+
+        function renderHandoverCS() {
+            const el = document.getElementById('hw-list')
+            if (!el) return
+            switchHwTab(hwCurTab)
+            let filtered = HANDOVERS.filter(h => h.cs_key === curKey)
+            if (hwCurTab === 'pending') filtered = filtered.filter(h => h.status === 'pending')
+            else if (hwCurTab === 'in_progress') filtered = filtered.filter(h => h.status === 'in_progress' || h.status === 'hold')
+            else filtered = filtered.filter(h => ['booked','contracted','failed'].includes(h.status))
+
+            if (filtered.length === 0) {
+                el.innerHTML = '<p style="text-align:center;color:var(--text3);padding:20px">案件がありません</p>'
+                return
+            }
+            el.innerHTML = filtered.map(h => hwCard(h, false)).join('')
+        }
+
+        function renderHandoverAdmin() {
+            const el = document.getElementById('hw-admin-list')
+            if (!el) return
+            const statusF = document.getElementById('hw-admin-filter-status')?.value || ''
+            const csF = document.getElementById('hw-admin-filter-cs')?.value || ''
+            let filtered = HANDOVERS
+            if (statusF) filtered = filtered.filter(h => h.status === statusF)
+            if (csF) filtered = filtered.filter(h => h.cs_key === csF)
+
+            if (filtered.length === 0) {
+                el.innerHTML = '<p style="text-align:center;color:var(--text3);padding:20px">案件がありません</p>'
+                return
+            }
+            el.innerHTML = filtered.map(h => hwCard(h, true)).join('')
+        }
+
+        function hwCard(h, isAdmin) {
+            const sCol = HW_STATUS_COLOR[h.status] || 'var(--text2)'
+            const sLbl = HW_STATUS_LABEL[h.status] || h.status
+            const pCol = HW_PRIORITY_COLOR[h.priority] || 'var(--text2)'
+            const pLbl = HW_PRIORITY_LABEL[h.priority] || h.priority
+            const nurseName = h.nurse_key ? (SM[h.nurse_key]?.name || h.nurse_key) : '不明'
+            const csName = h.cs_key ? (SM[h.cs_key]?.name || h.cs_key) : '未割当'
+            const ts = h.timestamp ? String(h.timestamp).substring(0, 16).replace('T', ' ') : ''
+
+            const actionBtns = isAdmin || h.cs_key === curKey ? `
+                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
+                    ${h.status === 'pending' ? `<button class="btn-outline" style="font-size:11px;padding:4px 10px" onclick="updateHwStatus('${h.id}','in_progress')">対応開始</button>` : ''}
+                    ${['pending','in_progress','hold'].includes(h.status) ? `
+                        <button class="btn-outline" style="font-size:11px;padding:4px 10px;color:var(--green);border-color:var(--green)" onclick="openHwResult('${h.id}','booked')">予約成立</button>
+                        <button class="btn-outline" style="font-size:11px;padding:4px 10px;color:#886334;border-color:#886334" onclick="openHwResult('${h.id}','contracted')">契約成立</button>
+                        <button class="btn-outline" style="font-size:11px;padding:4px 10px;color:var(--text3)" onclick="updateHwStatus('${h.id}','failed')">不成立</button>
+                        <button class="btn-outline" style="font-size:11px;padding:4px 10px" onclick="updateHwStatus('${h.id}','hold')">保留</button>
+                    ` : ''}
+                </div>` : ''
+
+            return `<div class="card" style="margin-bottom:10px;padding:14px">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:6px">
+                    <div>
+                        <span style="font-size:15px;font-weight:600;color:var(--text)">${h.patient_name || '患者名未入力'}</span>
+                        <span class="badge" style="margin-left:8px;background:rgba(0,0,0,.05);color:${pCol};border:1px solid ${pCol};font-size:11px">${pLbl}</span>
+                    </div>
+                    <span class="badge" style="background:rgba(0,0,0,.05);color:${sCol};border:1px solid ${sCol}">${sLbl}</span>
+                </div>
+                <div style="font-size:12px;color:var(--text3);margin-top:6px">
+                    看護師：${nurseName}　→　CS：${csName}　｜　${ts}
+                    ${h.next_date ? `　｜　次回候補：${h.next_date}` : ''}
+                </div>
+                <div style="font-size:13px;color:var(--text2);margin-top:8px;padding:8px;background:var(--bg2);border-radius:6px;white-space:pre-wrap">${h.memo || ''}</div>
+                ${h.result_date ? `<div style="font-size:12px;color:var(--green);margin-top:6px">✅ 成立日：${h.result_date}</div>` : ''}
+                ${actionBtns}
+            </div>`
+        }
+
+        async function submitHandover() {
+            const patient = document.getElementById('hw-patient')?.value?.trim()
+            const csKey = document.getElementById('hw-cs')?.value
+            const memo = document.getElementById('hw-memo')?.value?.trim()
+            const nextDate = document.getElementById('hw-date')?.value
+            const priority = document.getElementById('hw-priority')?.value || 'mid'
+
+            if (!patient) { toast('患者名を入力してください', 'var(--red)'); return }
+            if (!csKey) { toast('担当カウンセラーを選択してください', 'var(--red)'); return }
+            if (!memo) { toast('引継ぎ内容を入力してください', 'var(--red)'); return }
+
+            showLoading('引継ぎを送信中...')
+            const res = await gasPost({
+                action: 'addHandover',
+                nurse_key: curKey,
+                nurse_name: dn(curKey),
+                cs_key: csKey,
+                cs_name: dn(csKey),
+                patient_name: patient,
+                memo,
+                next_date: nextDate || '',
+                priority
+            })
+            hideLoading()
+            if (res.ok) {
+                auditLog('引継ぎ提出', patient, '', `CS：${dn(csKey)}`)
+                toast('引継ぎを提出しました', 'var(--green)')
+                document.getElementById('hw-patient').value = ''
+                document.getElementById('hw-memo').value = ''
+                document.getElementById('hw-date').value = ''
+                document.getElementById('hw-cs').value = ''
+                document.getElementById('hw-priority').value = 'mid'
+            } else {
+                toast('送信に失敗しました', 'var(--red)')
+            }
+        }
+
+        async function updateHwStatus(id, status) {
+            showLoading('更新中...')
+            const res = await gasPost({ action: 'updateHandoverStatus', id, status, updated_by: dn(curKey) })
+            hideLoading()
+            if (res.ok) {
+                const h = HANDOVERS.find(x => x.id === id)
+                const oldStatus = h ? HW_STATUS_LABEL[h.status] : ''
+                auditLog('引継ぎステータス変更', h?.patient_name || id, oldStatus, HW_STATUS_LABEL[status])
+                toast('ステータスを更新しました', 'var(--green)')
+                await loadHandovers()
+            } else {
+                toast('更新に失敗しました', 'var(--red)')
+            }
+        }
+
+        function openHwResult(id, resultType) {
+            const dateStr = prompt('成立日を入力してください（例：2026-06-13）', new Date().toISOString().substring(0,10))
+            if (!dateStr) return
+            showLoading('登録中...')
+            gasPost({ action: 'updateHandoverStatus', id, status: resultType, result_date: dateStr, result_type: resultType, updated_by: dn(curKey) })
+                .then(res => {
+                    hideLoading()
+                    if (res.ok) {
+                        const h = HANDOVERS.find(x => x.id === id)
+                        auditLog('引継ぎ成立登録', h?.patient_name || id, '', HW_STATUS_LABEL[resultType] + '（' + dateStr + '）')
+                        toast(HW_STATUS_LABEL[resultType] + 'を登録しました', 'var(--green)')
+                        loadHandovers()
+                    } else {
+                        toast('登録に失敗しました', 'var(--red)')
+                    }
+                })
         }
 
         // ─────────── 変更履歴 ───────────
