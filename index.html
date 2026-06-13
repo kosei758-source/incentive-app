@@ -2169,11 +2169,48 @@
             if (screens[0] === 'dash') renderDash()
             if (screens[0] === 'approve') { renderApprove(); renderKPI() }
         }
-        function showScr(id, btn) {
+        async function showScr(id, btn) {
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'))
             btn.classList.add('active')
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'))
             document.getElementById('screen-' + id).classList.add('active')
+
+            // タブ切り替え時にGASから最新データを取得
+            try {
+                // 申告データ更新（dash/approve/kpi/compare）
+                if (['dash','approve','kpi','compare'].includes(id)) {
+                    const aRes = await gasPost({ action: 'getActions', month: '2026-06' })
+                    if (aRes.ok && aRes.actions && aRes.actions.length > 0) {
+                        HIST.length = 0
+                        aRes.actions.forEach(r => {
+                            HIST.push({
+                                date: r.timestamp ? r.timestamp.substring(5,10).replace('-','/') : '--/--',
+                                month: r.month, key: r.staff_key, action: r.action,
+                                yen: Number(r.yen) || 0, status: r.status,
+                                reason: r.reason || '', _id: r.id
+                            })
+                        })
+                    }
+                }
+                // スタッフデータ更新（dash/pin/kpi）
+                if (['dash','pin','kpi'].includes(id)) {
+                    const sRes = await gasPost({ action: 'getStaff' })
+                    if (sRes.ok && sRes.staff) {
+                        sRes.staff.forEach(s => {
+                            if (SM[s.key]) {
+                                SM[s.key].stamps = Number(s.stamps) || 0
+                                if (s.pin) SM[s.key].pin = String(s.pin)
+                            }
+                        })
+                    }
+                }
+                // 報酬設定更新（targets/dash/input）
+                if (['targets','dash','input'].includes(id)) {
+                    const rRes = await gasPost({ action: 'getRewards' })
+                    if (rRes.ok && rRes.rewards) Object.assign(REWARDS, rRes.rewards)
+                }
+            } catch(e) { console.warn('タブ更新エラー:', e) }
+
             if (id === 'dash') renderDash()
             if (id === 'input') renderInput()
             if (id === 'kpi') renderKPI()
