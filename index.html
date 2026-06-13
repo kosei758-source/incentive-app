@@ -1736,6 +1736,17 @@
             }
         }
 
+        // 当月判定ヘルパー
+        function isCurMonth(monthVal) {
+            if (!monthVal) return false;
+            if (typeof monthVal === 'string' && monthVal.startsWith('2026-06')) return true;
+            try {
+                const d = new Date(monthVal);
+                if (!isNaN(d)) return d.getFullYear() === 2026 && d.getMonth() === 5; // 5=June
+            } catch(e) {}
+            return false;
+        }
+
         // 変更履歴ログ送信（fire-and-forget）
         function auditLog(actionType, target, before, after) {
             const operator = dn(curKey) + '（' + (SM[curKey] ? SM[curKey].lbl : ''  ) + '）';
@@ -2280,7 +2291,7 @@
             document.getElementById('stamp-info').textContent = c >= REWARDS.stamp_need ? `${c}/${REWARDS.stamp_need} スタンプ達成！換金申請可能` : `${c}/${REWARDS.stamp_need} スタンプ（あと${REWARDS.stamp_need - c}個で${REWARDS.stamp10.toLocaleString()}円換金）`
             document.getElementById('stamp-info').style.color = isGold ? 'var(--gold)' : 'var(--p1)'
 
-            const rows = HIST.filter(h => h.key === curKey && h.month === '2026-06')
+            const rows = HIST.filter(h => h.key === curKey && isCurMonth(h.month))
             const appr = rows.filter(r => r.status === 'approved')
             const stampKanDash = Math.floor(SM[curKey].stamps / 10) * REWARDS.stamp10
             const total = appr.reduce((a, b) => a + b.yen, 0) + stampKanDash
@@ -2385,7 +2396,7 @@
                 // 管理者：全スタッフ表示（実績なしも含む）
                 document.getElementById('staff-sum').innerHTML = Object.entries(SM)
                     .filter(([, s]) => s.role !== 'a').map(([k, s]) => {
-                        const rows = HIST.filter(r => r.key === k && r.status === 'approved' && r.month === '2026-06')
+                        const rows = HIST.filter(r => r.key === k && r.status === 'approved' && isCurMonth(r.month))
                         const par = rows.filter(r => r.action.includes('連携')).reduce((a, b) => a + b.yen, 0)
                         const dir = rows.filter(r => !r.action.includes('連携')).reduce((a, b) => a + b.yen, 0)
                         const stampKan = Math.floor(s.stamps / 10) * REWARDS.stamp10  // 10個で1000円換金
@@ -2400,7 +2411,7 @@
                     }).join('')
             } else {
                 // 一般スタッフ：自分の実績のみ
-                const rows = HIST.filter(r => r.key === curKey && r.status === 'approved' && r.month === '2026-06')
+                const rows = HIST.filter(r => r.key === curKey && r.status === 'approved' && isCurMonth(r.month))
                 const s = SM[curKey], rb = RB[s.role]
                 const par = rows.filter(r => r.action.includes('連携')).reduce((a, b) => a + b.yen, 0)
                 const dir = rows.filter(r => !r.action.includes('連携')).reduce((a, b) => a + b.yen, 0)
@@ -2428,7 +2439,7 @@
                 const rows = HIST.filter(r => r.key === key && r.status === 'approved' && r.month === month)
                 const yenSum = rows.reduce((a, b) => a + b.yen, 0)
                 // 当月（2026-06）のみスタンプ換金を加算
-                const stampKan = (month === '2026-06') ? Math.floor(SM[key].stamps / 10) * REWARDS.stamp10 : 0
+                const stampKan = (isCurMonth(month)) ? Math.floor(SM[key].stamps / 10) * REWARDS.stamp10 : 0
                 return yenSum + stampKan
             }
             const staffKeys = Object.keys(SM).filter(k => SM[k].role !== 'a' && dn(k) && !dn(k).includes('その他'))
@@ -2485,7 +2496,7 @@
         }
         function renderApprove() {
             const pend = HIST.filter(r => r.status === 'pending')
-            const tot = HIST.filter(r => r.status === 'approved' && r.month === '2026-06').reduce((a, b) => a + b.yen, 0)
+            const tot = HIST.filter(r => r.status === 'approved' && isCurMonth(r.month)).reduce((a, b) => a + b.yen, 0)
             document.getElementById('approve-sum').innerHTML = `今月の承認済み合計：<strong>¥${tot.toLocaleString()}</strong>　　未承認：<strong>${pend.length}件</strong>`
             renderApprList(); renderReport()
         }
