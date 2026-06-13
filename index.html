@@ -2138,7 +2138,7 @@
                 pinBuf = ''; setTimeout(() => renderDots(0), 350)
             }
         }
-        function doLogin(k) {
+        async function doLogin(k) {
             curKey = k
             document.getElementById('login-screen').style.display = 'none'
             document.getElementById('main-screen').style.display = 'block'
@@ -2146,6 +2146,35 @@
             const chip = document.getElementById('role-chip')
             chip.textContent = `${s.lbl}：${dn(k)}`
             chip.style.background = rb.bg; chip.style.color = rb.co; chip.style.borderColor = rb.border
+            // ログイン時にGASから最新データを取得
+            showLoading('データを読み込み中...')
+            try {
+                const aRes = await gasPost({ action: 'getActions', month: '2026-06' })
+                if (aRes.ok && aRes.actions && aRes.actions.length > 0) {
+                    HIST.length = 0
+                    aRes.actions.forEach(r => {
+                        HIST.push({
+                            date: r.timestamp ? (()=>{ const t=String(r.timestamp); const m=t.match(/(\d{4})[/\-](\d{2})[/\-](\d{2})/); return m ? m[2]+'/'+m[3] : '--/--'; })() : '--/--',
+                            month: r.month instanceof Date ? '2026-06' : String(r.month).substring(0,7).replace('/','-'),
+                            key: r.staff_key, action: r.action,
+                            yen: Number(r.yen) || 0, status: r.status,
+                            reason: r.reason || '', _id: r.id
+                        })
+                    })
+                }
+                const sRes = await gasPost({ action: 'getStaff' })
+                if (sRes.ok && sRes.staff) {
+                    sRes.staff.forEach(s => {
+                        if (SM[s.key]) {
+                            SM[s.key].stamps = Number(s.stamps) || 0
+                            if (s.pin) SM[s.key].pin = String(s.pin)
+                        }
+                    })
+                }
+                const rRes = await gasPost({ action: 'getRewards' })
+                if (rRes.ok && rRes.rewards) Object.assign(REWARDS, rRes.rewards)
+            } catch(e) { console.warn('ログイン時データ取得エラー:', e) }
+            hideLoading()
             renderNav()
         }
         function doLogout() {
