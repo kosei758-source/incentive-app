@@ -1674,7 +1674,44 @@
                         </thead>
                         <tbody id="pin-list"></tbody>
                     </table>
+            
+        <!-- 変更履歴（管理者） -->
+        <div id="screen-audit" class="screen">
+            <div class="card">
+                <div class="card-title">変更履歴</div>
+                <p style="font-size:12px;color:var(--text3);margin-bottom:14px">すべての操作者・操作内容を記録しています。最新200件を表示。</p>
+                <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+                    <select class="form-input" id="audit-filter-action" style="width:auto;font-size:12px;padding:6px 10px" onchange="renderAudit()">
+                        <option value="">すべての操作</option>
+                        <option value="承認">承認</option>
+                        <option value="却下">却下</option>
+                        <option value="PIN変更">PIN変更</option>
+                        <option value="報酬変更">報酬変更</option>
+                        <option value="目標変更">目標変更</option>
+                        <option value="行動申告">行動申告</option>
+                    </select>
+                    <button class="btn-outline" style="font-size:12px;padding:6px 14px" onclick="loadAudit()">🔄 再読み込み</button>
                 </div>
+                <div class="tbl-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>日時</th>
+                                <th>操作者</th>
+                                <th>操作</th>
+                                <th>対象</th>
+                                <th>変更前</th>
+                                <th>変更後</th>
+                            </tr>
+                        </thead>
+                        <tbody id="audit-list">
+                            <tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">読み込み中...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
             </div>
         </div>
     </div>
@@ -1697,6 +1734,12 @@
                 console.error('GAS通信エラー:', e);
                 return { ok: false, error: e.toString() };
             }
+        }
+
+        // 変更履歴ログ送信（fire-and-forget）
+        function auditLog(actionType, target, before, after) {
+            const operator = dn(curKey) + '（' + (SM[curKey] ? SM[curKey].lbl : ''  ) + '）';
+            gasPost({ action: 'addAuditLog', operator, action_type: actionType, target, before: before || '', after: after || '' });
         }
 
         // ローディング表示
@@ -1771,6 +1814,7 @@
                     yen: record.yen, status: 'pending', reason: '', _id: res.id
                 });
                 if (selAct.stamp) SM[curKey].stamps = Math.min(SM[curKey].stamps + 1, 99);
+                auditLog('行動申告', dn(curKey), '', selAct.name + '（¥' + record.yen + '）');
                 toast('申告しました。承認をお待ちください。', 'var(--p1)');
                 renderInput();
             } else {
@@ -1785,6 +1829,7 @@
             if (ok) {
                 HIST[idx].status = 'approved';
                 renderApprove();
+                auditLog('承認', HIST[idx].key ? dn(HIST[idx].key) : '', 'pending', HIST[idx].action);
                 toast('承認しました', 'var(--green)');
                 // GASにも反映
                 if (HIST[idx]._id) gasPost({ action: 'approve', record_id: HIST[idx]._id, approved_by: dn(curKey) });
@@ -1803,6 +1848,7 @@
             if (HIST[rejectTarget]._id) {
                 gasPost({ action: 'reject', record_id: HIST[rejectTarget]._id, reason, approved_by: dn(curKey) });
             }
+            auditLog('却下', HIST[rejectTarget].key ? dn(HIST[rejectTarget].key) : '', 'pending', reason);
             closeRejectModal();
             renderApprove();
             toast('却下しました', 'var(--red)');
@@ -1819,6 +1865,7 @@
             SM[k].pin = p; renderPinMgr();
             document.getElementById(`nb-${k}`).textContent = p;
             document.getElementById(`nb-${k}`).style.display = 'inline-block';
+            auditLog('PIN変更', dn(k), '（旧PIN）', p);
             toast(`${dn(k)} のPINを発行しました（${p}）`, 'var(--green)');
         }
 
@@ -1831,6 +1878,7 @@
             SM[k].pin = v; renderPinMgr();
             document.getElementById(`nb-${k}`).textContent = v;
             document.getElementById(`nb-${k}`).style.display = 'inline-block';
+            auditLog('PIN変更', dn(k), '（旧PIN）', v);
             toast(`${dn(k)} のPINを設定しました`, 'var(--green)');
         }
 
@@ -1857,7 +1905,8 @@
                 const b = document.getElementById('bonus-sub-text');
                 if (b) b.innerHTML = `全KPI達成で <strong>全員に${REWARDS.team_bonus_min.toLocaleString()}〜${REWARDS.team_bonus_max.toLocaleString()}円</strong> 均等支給`;
             }
-            toast('報酬金額を保存しました', 'var(--green)');
+            auditLog('報酬変更', '報酬設定', '', JSON.stringify(REWARDS));
+    toast('報酬金額を保存しました', 'var(--green)');
         }
 
         // ═══════════════════════════════════════════════
@@ -1972,14 +2021,14 @@
         ]
         // 全員に表示するタブ
         const SCR_ALL = ['dash', 'input', 'kpi', 'compare']
-        const SCR_ADMIN = ['approve', 'targets', 'pin']
-        const SL = { dash: 'ダッシュボード', input: '行動入力', kpi: 'KPI', compare: '比較', approve: '承認・集計', targets: '目標設定', pin: 'PIN管理' }
+        const SCR_ADMIN = ['approve', 'targets', 'pin', 'audit']
+        const SL = { dash: 'ダッシュボード', input: '行動入力', kpi: 'KPI', compare: '比較', approve: '承認・集計', targets: '目標設定', pin: 'PIN管理', audit: '変更履歴' }
         // 医師はdashとkpiとcompare
         const SCREENS_BY_ROLE = {
             c: ['dash', 'input', 'kpi'],
             n: ['dash', 'input', 'kpi'],
             d: ['dash', 'input', 'kpi'],
-            a: ['approve', 'kpi', 'compare', 'targets', 'pin'],
+            a: ['approve', 'kpi', 'compare', 'targets', 'pin', 'audit'],
         }
 
         // 履歴（前月・前年分もサンプルで含む）
@@ -2114,6 +2163,7 @@
             if (id === 'approve') renderApprove()
             if (id === 'targets') renderTargets()
             if (id === 'pin') renderPinMgr()
+            if (id === 'audit') loadAudit()
         }
 
         // ─────────── ダッシュボード ───────────
@@ -2449,6 +2499,7 @@
                 if (!isNaN(v) && v > 0) k.tgt = v
             })
             if (curKey) { const a = document.querySelector('.screen.active'); if (a && a.id === 'screen-kpi') renderKPI() }
+            auditLog('目標変更', 'KPI目標', '', KPI_TARGETS.map(k=>k.lbl+':'+k.tgt+k.unit).join(' / '));
             toast('目標値を保存しました', 'var(--green)')
         }
         function saveRewards_LOCAL_DISABLED() {
@@ -2508,6 +2559,48 @@
             document.getElementById(`nb-${k}`).textContent = v
             document.getElementById(`nb-${k}`).style.display = 'inline-block'
             toast(`${dn(k)} のPINを設定しました`, 'var(--green)')
+        }
+
+        // ─────────── 変更履歴 ───────────
+        let AUDIT_LOGS = []
+
+        async function loadAudit() {
+            const tb = document.getElementById('audit-list')
+            if (!tb) return
+            tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">読み込み中...</td></tr>'
+            const res = await gasPost({ action: 'getAuditLogs' })
+            if (res.ok && res.logs) {
+                AUDIT_LOGS = res.logs
+                renderAudit()
+            } else {
+                tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">データを取得できませんでした</td></tr>'
+            }
+        }
+
+        function renderAudit() {
+            const tb = document.getElementById('audit-list')
+            if (!tb) return
+            const filter = document.getElementById('audit-filter-action')?.value || ''
+            const logs = filter ? AUDIT_LOGS.filter(l => l.action === filter) : AUDIT_LOGS
+            if (logs.length === 0) {
+                tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">履歴がありません</td></tr>'
+                return
+            }
+            const ACTION_COLOR = {
+                '承認': 'var(--green)', '却下': 'var(--red)', 'PIN変更': '#1A5FAD',
+                '報酬変更': 'var(--p1)', '目標変更': 'var(--p2)', '行動申告': 'var(--text2)'
+            }
+            tb.innerHTML = logs.map(l => {
+                const col = ACTION_COLOR[l.action] || 'var(--text2)'
+                return `<tr>
+                    <td style="font-size:12px;color:var(--text3);white-space:nowrap">${l.timestamp}</td>
+                    <td style="font-size:12px;font-weight:500">${l.operator}</td>
+                    <td><span class="badge" style="background:rgba(0,0,0,.05);color:${col};border:1px solid ${col}">${l.action}</span></td>
+                    <td style="font-size:12px">${l.target}</td>
+                    <td style="font-size:11px;color:var(--text3);max-width:120px;overflow:hidden;text-overflow:ellipsis">${l.before || '—'}</td>
+                    <td style="font-size:11px;color:var(--text);max-width:120px;overflow:hidden;text-overflow:ellipsis">${l.after || '—'}</td>
+                </tr>`
+            }).join('')
         }
 
         // ─────────── Toast ───────────
