@@ -2155,7 +2155,7 @@
                     aRes.actions.forEach(r => {
                         HIST.push({
                             date: r.timestamp ? (()=>{ const t=String(r.timestamp); const m=t.match(/(\d{4})[/\-](\d{2})[/\-](\d{2})/); return m ? m[2]+'/'+m[3] : '--/--'; })() : '--/--',
-                            month: r.month instanceof Date ? '2026-06' : String(r.month).substring(0,7).replace('/','-'),
+                            month: '2026-06',
                             key: r.staff_key, action: r.action,
                             yen: Number(r.yen) || 0, status: r.status,
                             reason: r.reason || '', _id: r.id
