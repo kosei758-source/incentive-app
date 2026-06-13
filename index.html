@@ -1943,7 +1943,7 @@
                     aRes.actions.forEach(r => {
                         HIST.push({
                             date: r.timestamp ? (()=>{ const t=String(r.timestamp); const m=t.match(/(\d{4})[/\-](\d{2})[/\-](\d{2})/); return m ? m[2]+'/'+m[3] : '--/--'; })() : '--/--',
-                            month: r.month,
+                            month: (()=>{ const raw = r.month; if (!raw) return ''; const d = new Date(raw); if (!isNaN(d)) { const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); return y+'-'+m; } return String(raw).substring(0,7).replace('/','-'); })(),
                             key: r.staff_key,
                             action: r.action,
                             yen: Number(r.yen) || 0,
@@ -2155,7 +2155,7 @@
                     aRes.actions.forEach(r => {
                         HIST.push({
                             date: r.timestamp ? (()=>{ const t=String(r.timestamp); const m=t.match(/(\d{4})[/\-](\d{2})[/\-](\d{2})/); return m ? m[2]+'/'+m[3] : '--/--'; })() : '--/--',
-                            month: '2026-06',
+                            month: (()=>{ const raw = r.month; if (!raw) return ''; const d = new Date(raw); if (!isNaN(d)) { const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); return y+'-'+m; } return String(raw).substring(0,7).replace('/','-'); })(),
                             key: r.staff_key, action: r.action,
                             yen: Number(r.yen) || 0, status: r.status,
                             reason: r.reason || '', _id: r.id
@@ -2214,7 +2214,7 @@
                         aRes.actions.forEach(r => {
                             HIST.push({
                                 date: r.timestamp ? (()=>{ const t=String(r.timestamp); const m=t.match(/(\d{4})[/\-](\d{2})[/\-](\d{2})/); return m ? m[2]+'/'+m[3] : '--/--'; })() : '--/--',
-                                month: r.month, key: r.staff_key, action: r.action,
+                                month: (()=>{ const raw=r.month; if(!raw) return ''; const d=new Date(raw); if(!isNaN(d)){const y=d.getFullYear();const m=String(d.getMonth()+1).padStart(2,'0');return y+'-'+m;} return String(raw).substring(0,7).replace('/','-'); })(), key: r.staff_key, action: r.action,
                                 yen: Number(r.yen) || 0, status: r.status,
                                 reason: r.reason || '', _id: r.id
                             })
