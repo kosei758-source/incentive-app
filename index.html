@@ -1886,10 +1886,26 @@
         // GAS版：報酬設定保存
         // ═══════════════════════════════════════════════
         async function saveRewards() {
+            const REWARD_LABELS = {
+                stamp_need: 'スタンプ換金に必要な個数',
+                stamp10: 'スタンプ換金額',
+                stamp_yen: 'スタンプ1個の表示価値',
+                repeat2: '初回→2回目来院確認報酬',
+                partner: '連携報酬',
+                handover3: '引き継ぎ達成報酬',
+                team_bonus_min: 'チームボーナス最低額',
+                team_bonus_max: 'チームボーナス最高額',
+            };
             const keys = ['stamp_need', 'stamp10', 'stamp_yen', 'repeat2', 'partner', 'handover3', 'team_bonus_min', 'team_bonus_max'];
             keys.forEach(k => {
                 const v = parseInt(document.getElementById(`rwd-${k}`).value);
-                if (!isNaN(v) && v >= 0) REWARDS[k] = v;
+                if (!isNaN(v) && v >= 0) {
+                    const before = REWARDS[k];
+                    if (before !== v) {
+                        auditLog('報酬変更', REWARD_LABELS[k] || k, String(before), String(v));
+                    }
+                    REWARDS[k] = v;
+                }
             });
             showLoading('保存中...');
             await gasPost({ action: 'saveRewards', rewards: REWARDS });
@@ -1905,9 +1921,7 @@
                 const b = document.getElementById('bonus-sub-text');
                 if (b) b.innerHTML = `全KPI達成で <strong>全員に${REWARDS.team_bonus_min.toLocaleString()}〜${REWARDS.team_bonus_max.toLocaleString()}円</strong> 均等支給`;
             }
-            const rewardDesc = Object.entries(REWARDS).map(([k,v])=>k+':'+v).join(' / ');
-            auditLog('報酬変更', '報酬設定', '', rewardDesc);
-    toast('報酬金額を保存しました', 'var(--green)');
+            toast('報酬金額を保存しました', 'var(--green)');
         }
 
         // ═══════════════════════════════════════════════
