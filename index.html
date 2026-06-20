@@ -2848,15 +2848,19 @@
             if (role === 'a') renderHandoverAdmin()
         }
 
-        function switchHwTab(tab) {
-            hwCurTab = tab
+        function updateHwTabStyles() {
             ;['pending','in_progress','done'].forEach(t => {
                 const btn = document.getElementById('hw-tab-' + t)
                 if (btn) {
-                    btn.style.background = t === tab ? 'var(--p1)' : 'rgba(0,0,0,.06)'
-                    btn.style.color = t === tab ? '#fff' : 'var(--text2)'
+                    btn.style.background = t === hwCurTab ? 'var(--p1)' : 'rgba(0,0,0,.06)'
+                    btn.style.color = t === hwCurTab ? '#fff' : 'var(--text2)'
                 }
             })
+        }
+
+        function switchHwTab(tab) {
+            hwCurTab = tab
+            updateHwTabStyles()
             renderHandoverCS()
         }
 
@@ -2874,7 +2878,7 @@
         function renderHandoverCS() {
             const el = document.getElementById('hw-list')
             if (!el) return
-            switchHwTab(hwCurTab)
+            updateHwTabStyles()
             let filtered
             if (hwCurTab === 'pending') {
                 // 未対応：CS未割当の全件（先着クレーム対象）
