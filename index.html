@@ -1526,6 +1526,30 @@
                             class="form-input" id="inp-memo" placeholder="例：眉下切開の相談で次回予約"></div>
                     <button class="btn-pink" onclick="submitAction()">申告する</button>
                 </div>
+                <div id="handover-inline-form" style="display:none">
+                    <p style="font-size:12px;color:var(--text3);margin-bottom:14px">引継ぎ内容を入力して提出します。担当カウンセラーは先着クレーム方式のため、ここで指名する必要はありません。</p>
+                    <div class="form-group">
+                        <label class="form-label">患者名・ID <span style="color:var(--red)">*</span></label>
+                        <input class="form-input" id="hw-i-patient" placeholder="例：山田 太郎 / 患者ID:1234" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">引継ぎ内容・メモ <span style="color:var(--red)">*</span></label>
+                        <textarea class="form-input" id="hw-i-memo" rows="4" placeholder="施術内容、患者の希望、注意点など"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">次回予約候補日</label>
+                        <input class="form-input" id="hw-i-date" type="date" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">優先度</label>
+                        <select class="form-input" id="hw-i-priority">
+                            <option value="mid">中（通常）</option>
+                            <option value="high">高（急ぎ）</option>
+                            <option value="low">低</option>
+                        </select>
+                    </div>
+                    <button class="btn-pink" style="width:100%" onclick="submitHandoverAndAction()">引継ぎを提出する</button>
+                </div>
             </div>
         </div>
 
@@ -1717,45 +1741,22 @@
 
         <!-- 引継ぎ管理 -->
         <div id="screen-handover" class="screen">
-            <div id="handover-nurse-form" style="display:none">
+            <div id="handover-nurse-history" style="display:none">
                 <div class="card">
-                    <div class="card-title">引継ぎ情報を提出</div>
-                    <p style="font-size:12px;color:var(--text3);margin-bottom:14px">担当カウンセラーへ患者情報を引き継ぎます。</p>
-                    <div class="form-group">
-                        <label class="form-label">患者名・ID <span style="color:var(--red)">*</span></label>
-                        <input class="form-input" id="hw-patient" placeholder="例：山田 太郎 / 患者ID:1234" />
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">担当カウンセラー <span style="color:var(--red)">*</span></label>
-                        <select class="form-input" id="hw-cs"></select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">引継ぎ内容・メモ <span style="color:var(--red)">*</span></label>
-                        <textarea class="form-input" id="hw-memo" rows="4" placeholder="施術内容、患者の希望、注意点など"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">次回予約候補日</label>
-                        <input class="form-input" id="hw-date" type="date" />
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">優先度</label>
-                        <select class="form-input" id="hw-priority">
-                            <option value="mid">中（通常）</option>
-                            <option value="high">高（急ぎ）</option>
-                            <option value="low">低</option>
-                        </select>
-                    </div>
-                    <button class="btn-primary" style="width:100%;margin-top:8px" onclick="submitHandover()">引継ぎを提出する</button>
+                    <div class="card-title">引継ぎ提出履歴</div>
+                    <p style="font-size:12px;color:var(--text3);margin-bottom:14px">引継ぎの提出は「行動入力」→「引き継ぎシート提出」から行ってください。ここでは提出済みの案件の状況を確認できます。</p>
+                    <button class="btn-outline" style="font-size:12px;padding:6px 14px;margin-bottom:12px" onclick="loadHandovers()">🔄 更新</button>
+                    <div id="hw-nurse-list"></div>
                 </div>
             </div>
 
             <div id="handover-cs-view" style="display:none">
                 <div class="card">
-                    <div class="card-title">引継ぎ待ちリスト</div>
+                    <div class="card-title">引継ぎ案件</div>
                     <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-                        <button class="badge" id="hw-tab-pending" onclick="switchHwTab('pending')" style="cursor:pointer;padding:6px 14px">未対応</button>
-                        <button class="badge" id="hw-tab-in_progress" onclick="switchHwTab('in_progress')" style="cursor:pointer;padding:6px 14px">対応中</button>
-                        <button class="badge" id="hw-tab-done" onclick="switchHwTab('done')" style="cursor:pointer;padding:6px 14px">完了</button>
+                        <button class="badge" id="hw-tab-pending" onclick="switchHwTab('pending')" style="cursor:pointer;padding:6px 14px">未対応（クレーム可）</button>
+                        <button class="badge" id="hw-tab-in_progress" onclick="switchHwTab('in_progress')" style="cursor:pointer;padding:6px 14px">対応中（自分）</button>
+                        <button class="badge" id="hw-tab-done" onclick="switchHwTab('done')" style="cursor:pointer;padding:6px 14px">完了（自分）</button>
                         <button class="btn-outline" style="margin-left:auto;font-size:12px;padding:6px 14px" onclick="loadHandovers()">🔄 更新</button>
                     </div>
                     <div id="hw-list"></div>
@@ -1900,6 +1901,72 @@
                 renderInput();
             } else {
                 toast('送信に失敗しました。再度お試しください。', 'var(--red)');
+            }
+        }
+
+        async function submitHandoverAndAction() {
+            if (!selAct || selAct.id !== 'n1') return;
+            const s = SM[curKey];
+            if (s.isOther && !s.name) { toast('名前を入力してください', 'var(--red)'); return }
+
+            const patient = document.getElementById('hw-i-patient')?.value?.trim()
+            const memo = document.getElementById('hw-i-memo')?.value?.trim()
+            const nextDate = document.getElementById('hw-i-date')?.value
+            const priority = document.getElementById('hw-i-priority')?.value || 'mid'
+
+            if (!patient) { toast('患者名を入力してください', 'var(--red)'); return }
+            if (!memo) { toast('引継ぎ内容を入力してください', 'var(--red)'); return }
+
+            showLoading('引継ぎを送信中...')
+
+            // ① 引継ぎ案件として登録（CS未割当・先着クレーム方式）
+            const hwRes = await gasPost({
+                action: 'addHandover',
+                nurse_key: curKey,
+                nurse_name: dn(curKey),
+                cs_key: '',
+                cs_name: '',
+                patient_name: patient,
+                memo,
+                next_date: nextDate || '',
+                priority
+            })
+
+            if (!hwRes.ok) {
+                hideLoading()
+                toast('引継ぎの送信に失敗しました', 'var(--red)')
+                return
+            }
+
+            // ② 行動申告として記録（週3件カウント・スタンプ対象）
+            const record = {
+                action: 'addAction',
+                staff_key: curKey,
+                staff_name: dn(curKey),
+                role: s.role,
+                action_name: selAct.name,
+                yen: typeof selAct.yen === 'function' ? selAct.yen() : selAct.yen,
+                stamp: selAct.stamp ? true : false
+            };
+            const res = await gasPost(record);
+            hideLoading()
+
+            if (res.ok) {
+                HIST.unshift({
+                    date: new Date().toLocaleDateString('ja', { month: '2-digit', day: '2-digit' }).replace('/', '/'),
+                    month: '2026-06', key: curKey, action: selAct.name,
+                    yen: record.yen, status: 'pending', reason: '', _id: res.id
+                });
+                if (selAct.stamp) SM[curKey].stamps = Math.min(SM[curKey].stamps + 1, 99);
+                auditLog('引継ぎシート提出', patient, '', '行動申告も同時記録')
+                toast('引継ぎを提出しました', 'var(--green)')
+                document.getElementById('hw-i-patient').value = ''
+                document.getElementById('hw-i-memo').value = ''
+                document.getElementById('hw-i-date').value = ''
+                document.getElementById('hw-i-priority').value = 'mid'
+                renderInput()
+            } else {
+                toast('引継ぎは登録されましたが、行動申告の記録に失敗しました', 'var(--red)')
             }
         }
 
@@ -2394,6 +2461,7 @@
             const t = new Date()
             document.getElementById('inp-date').value = `${t.getFullYear()}/${String(t.getMonth() + 1).padStart(2, '0')}/${String(t.getDate()).padStart(2, '0')}`
             document.getElementById('extra-fields').style.display = 'none'
+            document.getElementById('handover-inline-form').style.display = 'none'
             selAct = null
         }
         function selAct_(id) {
@@ -2402,6 +2470,12 @@
             selAct = a
             document.querySelectorAll('.action-btn').forEach(b => b.classList.remove('sel'))
             document.getElementById('ab-' + id).classList.add('sel')
+            if (id === 'n1') {
+                document.getElementById('extra-fields').style.display = 'none'
+                document.getElementById('handover-inline-form').style.display = 'block'
+                return
+            }
+            document.getElementById('handover-inline-form').style.display = 'none'
             document.getElementById('extra-fields').style.display = 'block'
             const pg = document.getElementById('partner-grp')
             if (a.partner) {
@@ -2745,18 +2819,9 @@
 
         function initHandoverScreen() {
             const role = SM[curKey]?.role
-            document.getElementById('handover-nurse-form').style.display = role === 'n' ? 'block' : 'none'
+            document.getElementById('handover-nurse-history').style.display = role === 'n' ? 'block' : 'none'
             document.getElementById('handover-cs-view').style.display = (role === 'c') ? 'block' : 'none'
             document.getElementById('handover-admin-view').style.display = role === 'a' ? 'block' : 'none'
-
-            // CS選択プルダウンを構築
-            const sel = document.getElementById('hw-cs')
-            if (sel) {
-                sel.innerHTML = '<option value="">-- 選択してください --</option>'
-                Object.entries(SM).filter(([k, v]) => v.role === 'c' && v.active !== false).forEach(([k, v]) => {
-                    sel.innerHTML += `<option value="${k}">${v.name}</option>`
-                })
-            }
 
             // 管理者CSフィルタ
             const asel = document.getElementById('hw-admin-filter-cs')
@@ -2778,6 +2843,7 @@
                 HANDOVERS = []
             }
             const role = SM[curKey]?.role
+            if (role === 'n') renderHandoverNurse()
             if (role === 'c') renderHandoverCS()
             if (role === 'a') renderHandoverAdmin()
         }
@@ -2794,14 +2860,30 @@
             renderHandoverCS()
         }
 
+        function renderHandoverNurse() {
+            const el = document.getElementById('hw-nurse-list')
+            if (!el) return
+            const filtered = HANDOVERS.filter(h => h.nurse_key === curKey)
+            if (filtered.length === 0) {
+                el.innerHTML = '<p style="text-align:center;color:var(--text3);padding:20px">提出した引継ぎ案件はありません</p>'
+                return
+            }
+            el.innerHTML = filtered.map(h => hwCard(h, false)).join('')
+        }
+
         function renderHandoverCS() {
             const el = document.getElementById('hw-list')
             if (!el) return
             switchHwTab(hwCurTab)
-            let filtered = HANDOVERS.filter(h => h.cs_key === curKey)
-            if (hwCurTab === 'pending') filtered = filtered.filter(h => h.status === 'pending')
-            else if (hwCurTab === 'in_progress') filtered = filtered.filter(h => h.status === 'in_progress' || h.status === 'hold')
-            else filtered = filtered.filter(h => ['booked','contracted','failed'].includes(h.status))
+            let filtered
+            if (hwCurTab === 'pending') {
+                // 未対応：CS未割当の全件（先着クレーム対象）
+                filtered = HANDOVERS.filter(h => !h.cs_key && h.status === 'pending')
+            } else if (hwCurTab === 'in_progress') {
+                filtered = HANDOVERS.filter(h => h.cs_key === curKey && (h.status === 'in_progress' || h.status === 'hold'))
+            } else {
+                filtered = HANDOVERS.filter(h => h.cs_key === curKey && ['booked','contracted','failed'].includes(h.status))
+            }
 
             if (filtered.length === 0) {
                 el.innerHTML = '<p style="text-align:center;color:var(--text3);padding:20px">案件がありません</p>'
@@ -2835,10 +2917,16 @@
             const csName = h.cs_key ? (SM[h.cs_key]?.name || h.cs_key) : '未割当'
             const ts = h.timestamp ? String(h.timestamp).substring(0, 16).replace('T', ' ') : ''
 
-            const actionBtns = isAdmin || h.cs_key === curKey ? `
+            const isMine = h.cs_key === curKey
+            const canClaim = !isAdmin && !h.cs_key && h.status === 'pending' && SM[curKey]?.role === 'c'
+
+            const actionBtns = canClaim ? `
                 <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
-                    ${h.status === 'pending' ? `<button class="btn-outline" style="font-size:11px;padding:4px 10px" onclick="updateHwStatus('${h.id}','in_progress')">対応開始</button>` : ''}
-                    ${['pending','in_progress','hold'].includes(h.status) ? `
+                    <button class="btn-primary" style="font-size:11px;padding:5px 14px" onclick="claimHandover('${h.id}')">この案件を担当する</button>
+                </div>` : (isAdmin || isMine) ? `
+                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
+                    ${h.status === 'pending' && h.cs_key ? `<button class="btn-outline" style="font-size:11px;padding:4px 10px" onclick="updateHwStatus('${h.id}','in_progress')">対応開始</button>` : ''}
+                    ${['pending','in_progress','hold'].includes(h.status) && h.cs_key ? `
                         <button class="btn-outline" style="font-size:11px;padding:4px 10px;color:var(--green);border-color:var(--green)" onclick="openHwResult('${h.id}','booked')">予約成立</button>
                         <button class="btn-outline" style="font-size:11px;padding:4px 10px;color:#886334;border-color:#886334" onclick="openHwResult('${h.id}','contracted')">契約成立</button>
                         <button class="btn-outline" style="font-size:11px;padding:4px 10px;color:var(--text3)" onclick="updateHwStatus('${h.id}','failed')">不成立</button>
@@ -2864,40 +2952,28 @@
             </div>`
         }
 
-        async function submitHandover() {
-            const patient = document.getElementById('hw-patient')?.value?.trim()
-            const csKey = document.getElementById('hw-cs')?.value
-            const memo = document.getElementById('hw-memo')?.value?.trim()
-            const nextDate = document.getElementById('hw-date')?.value
-            const priority = document.getElementById('hw-priority')?.value || 'mid'
-
-            if (!patient) { toast('患者名を入力してください', 'var(--red)'); return }
-            if (!csKey) { toast('担当カウンセラーを選択してください', 'var(--red)'); return }
-            if (!memo) { toast('引継ぎ内容を入力してください', 'var(--red)'); return }
-
-            showLoading('引継ぎを送信中...')
+        async function claimHandover(id) {
+            showLoading('クレーム中...')
             const res = await gasPost({
-                action: 'addHandover',
-                nurse_key: curKey,
-                nurse_name: dn(curKey),
-                cs_key: csKey,
-                cs_name: dn(csKey),
-                patient_name: patient,
-                memo,
-                next_date: nextDate || '',
-                priority
+                action: 'updateHandoverStatus',
+                id,
+                status: 'in_progress',
+                cs_key: curKey,
+                cs_name: dn(curKey),
+                updated_by: dn(curKey)
             })
             hideLoading()
             if (res.ok) {
-                auditLog('引継ぎ提出', patient, '', `CS：${dn(csKey)}`)
-                toast('引継ぎを提出しました', 'var(--green)')
-                document.getElementById('hw-patient').value = ''
-                document.getElementById('hw-memo').value = ''
-                document.getElementById('hw-date').value = ''
-                document.getElementById('hw-cs').value = ''
-                document.getElementById('hw-priority').value = 'mid'
+                if (res.alreadyClaimed) {
+                    toast('この案件はすでに他のCSが担当しています', 'var(--red)')
+                } else {
+                    const h = HANDOVERS.find(x => x.id === id)
+                    auditLog('引継ぎクレーム', h?.patient_name || id, '未割当', dn(curKey))
+                    toast('案件を担当しました', 'var(--green)')
+                }
+                await loadHandovers()
             } else {
-                toast('送信に失敗しました', 'var(--red)')
+                toast('クレームに失敗しました', 'var(--red)')
             }
         }
 
